@@ -1,3 +1,6 @@
+import eslintPluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
+import oxlint from "eslint-plugin-oxlint";
+import pluginRouter from '@tanstack/eslint-plugin-router'
 import { defineConfig, globalIgnores } from "eslint/config";
 import reactDom from "eslint-plugin-react-dom";
 import reactJsx from "eslint-plugin-react-jsx";
@@ -21,8 +24,11 @@ export default defineConfig([
     extends: [
       tseslint.configs.base,
 
+      eslintPluginBetterTailwindcss.configs.recommended,
+      pluginRouter.configs["flat/recommended"],
+
+      oxlint.configs["flat/recommended"]
     ],
-    // Only rules oxlint has no native equivalent for; everything else lives in .oxlintrc.json
     plugins: {
       "react-dom": reactDom,
       "react-jsx": reactJsx,
@@ -36,6 +42,17 @@ export default defineConfig([
       "react-x/no-create-ref": "error",
       "react-x/no-forward-ref": "error",
       "react-x/no-use-context": "error",
+
+      // TailwindCSS - Oxfmt handles these already
+      "better-tailwindcss/enforce-consistent-class-order": "off",
+      "better-tailwindcss/enforce-consistent-line-wrapping": "off",
+      "better-tailwindcss/no-unnecessary-whitespace": "off",
+    },
+    settings: {
+      "better-tailwindcss": {
+        cwd: import.meta.dirname,
+        entryPoint: "src/styles.css",
+      },
     },
     languageOptions: {
       ecmaVersion: 2020,

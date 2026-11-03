@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "src/routeTree.gen.ts",
+    "src/components/ui",
+  ],
+
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+
+  "sortImports": {
+    "newlinesBetween": true,
+    "customGroups": [
+      {
+        "groupName": "alias-imports",
+        "elementNamePattern": ["@/**"]
+      }
+    ],
+    "groups": [
+      "side_effect",
+      ["parent", "sibling", "index"],
+      "builtin",
+      ["external", "type-external"],
+      ["alias-imports", "internal", "type-internal"],
+      "unknown"
+    ]
+  },
+  "sortTailwindcss": {
+    "stylesheet": "src/styles.css",
+    "functions": ["clsx", "cn"],
+    "preserveWhitespace": true
+  }
+}

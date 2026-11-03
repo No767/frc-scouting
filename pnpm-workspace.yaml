@@ -1,5 +1,0 @@
-minimumReleaseAgeExclude:
-  - oxlint-plugin-react-doctor@0.9.21
-permissions:
-  '@tanstack/router-plugin':
-    skills: true
