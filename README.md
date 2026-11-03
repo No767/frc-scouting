@@ -124,14 +124,13 @@ If the paths do **not** contain `mise`, see
 Finally, install dependencies:
 
 ```bash
-cd apps/ui
 pnpm install
 ```
 
 ## mise tasks
 
 mise runs project tasks defined in `mise.toml`. Run them from the repository
-root, not from `apps/ui`.
+root.
 
 List all available tasks:
 
@@ -142,7 +141,7 @@ mise tasks
 ### Updating pnpm
 
 The pnpm version is pinned in two files that must agree: `mise.toml` and
-`apps/ui/package.json`. If they disagree, `pnpm install` fails while trying
+`package.json`. If they disagree, `pnpm install` fails while trying
 to switch versions.
 
 Two tasks handle this together.
@@ -170,7 +169,7 @@ The task updates both files, then runs `pnpm install`, `pnpm typecheck`, and
 Commit all three changed files together:
 
 ```bash
-git add mise.toml apps/ui/package.json apps/ui/pnpm-lock.yaml
+git add mise.toml package.json pnpm-lock.yaml
 git commit -m "update pnpm to 12.14.0"
 ```
 
@@ -227,7 +226,7 @@ shell config.
 ### `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`
 
 A dependency was published too recently for pnpm's supply-chain policy. This
-is working as intended. Wait a day, or delete `apps/ui/pnpm-lock.yaml` and
+is working as intended. Wait a day, or delete `pnpm-lock.yaml` and
 run `pnpm install` for a fresh resolution.
 
 
@@ -236,7 +235,6 @@ run `pnpm install` for a fresh resolution.
 To run this application:
 
 ```bash
-cd apps/ui
 pnpm dev
 ```
 

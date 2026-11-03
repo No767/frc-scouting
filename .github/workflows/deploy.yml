@@ -13,25 +13,22 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/ui
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
         with:
-          package_json_file: apps/ui/package.json
+          package_json_file: package.json
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: apps/ui/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm build
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/ui/dist
+          path: dist
 
   deploy:
     needs: build

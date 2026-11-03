@@ -1,38 +1,59 @@
 [tools]
-biome = "2.5.9"
-node = "24"
-pnpm = "12.11.2"
+node = "26.13.0"
+pnpm = "12.16.1"
 
-[tasks."pnpm:check_version"]
-description = "Get recent pnpm versions for use in pnpm:update"
-run = "mise ls-remote pnpm | grep -E '^[0-9]+\\.[0-9]+\\.[0-9]+$' | tail -5"
+[settings]
+experimental = true
+lockfile = true
+locked_verify_provenance = true
+pin = true
 
-[tasks."pnpm:update"]
-dir = "{{config_root}}"
-description = "Change the pnpm version in mise.toml and package.json, then verify"
-usage = 'arg "<version>" help="The pnpm version, for example 11.2.0"'
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
 
-v="${usage_version}"
+[tasks."web:dev"]
+alias = ["web:up"]
+description = "Start frontend development server. Save file(s) to see changes"
+env._.path = "./node_modules/.bin"
+dir = "{{ config_root }}"
+run = "vite"
 
-mise use "pnpm@$v"
+[tasks."web:install"]
+description = "Pulls dependencies through pnpm"
+env._.path = "./node_modules/.bin"
+dir = "{{ config_root }}"
+run = "pnpm install"
 
-cd apps/ui
-npm pkg set packageManager="pnpm@$v"
+[tasks."web:build"]
+description = "Builds the frontend for distribution/preview"
+env._.path = "./node_modules/.bin"
+dir = "{{ config_root }}"
+run = "tsc -b && vite build"
 
-mise exec "pnpm@$v" -- pnpm install
-mise exec "pnpm@$v" -- pnpm typecheck
-mise exec "pnpm@$v" -- pnpm build
+[tasks."web:preview"]
+description = "Previews frontend"
+env._.path = "./node_modules/.bin"
+dir = "{{ config_root }}"
+run = "vite preview"
 
-echo "pnpm is now $v. Commit mise.toml, apps/ui/package.json, and the lockfile together."
-'''
+[tasks."web:clean-preview"]
+description = "Cleans out dist and then previews frontend"
+env._.path = "./node_modules/.bin"
+dir = "{{ config_root }}"
+run = ["rm -r dist", "tsc -b && vite build", "vite preview"]
 
-[tasks."node:update"]
-description = "Change the Node version in mise.toml, then verify"
-usage = 'arg "<version>" help="The Node major version, for example 24"'
-run = [
-  "mise use node@{{usage.version}}",
-  "node --version",
-]
+[tasks."web:lint"]
+description = "Lints the react codebase"
+env._.path = "./node_modules/.bin"
+dir = "{{ config_root }}"
+run = ["oxlint --type-aware --type-check --deny-warnings src", "eslint src --cache --cache-location .eslintcache"]
+
+[tasks."web:format"]
+description = "Formats the react codebase"
+env._.path = "./node_modules/.bin"
+dir = "{{ config_root }}"
+run = "oxfmt --write src"
+
+[tasks."web:check"]
+description = "Lints and formats the react codebase"
+env._.path = "./node_modules/.bin"
+dir = "{{ config_root }}"
+run = [{"task" = "web:lint"}, { "task" = "web:format"}]
