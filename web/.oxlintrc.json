@@ -15,17 +15,10 @@
       "capabilities": ["react", "react:19", "shadcn"]
     }
   },
-  "ignorePatterns": [
-    "node_modules",
-    "dist",
-    "src/routeTree.gen.ts",
-    "src/components/ui"
-  ],
+  "ignorePatterns": ["node_modules", "dist", "src/routeTree.gen.ts", "src/components/ui"],
   "overrides": [
     {
-      "files": [
-        "**/*.{ts,tsx}"
-      ],
+      "files": ["**/*.{ts,tsx}"],
       "rules": {
         "accessor-pairs": "error",
         "array-callback-return": "error",
@@ -178,13 +171,8 @@
         "jsx-a11y/no-interactive-element-to-noninteractive-role": [
           "error",
           {
-            "tr": [
-              "none",
-              "presentation"
-            ],
-            "canvas": [
-              "img"
-            ]
+            "tr": ["none", "presentation"],
+            "canvas": ["img"]
           }
         ],
         "jsx-a11y/no-noninteractive-element-interactions": [
@@ -200,51 +188,18 @@
               "onKeyDown",
               "onKeyUp"
             ],
-            "alert": [
-              "onKeyUp",
-              "onKeyDown",
-              "onKeyPress"
-            ],
-            "body": [
-              "onError",
-              "onLoad"
-            ],
-            "dialog": [
-              "onKeyUp",
-              "onKeyDown",
-              "onKeyPress"
-            ],
-            "iframe": [
-              "onError",
-              "onLoad"
-            ],
-            "img": [
-              "onError",
-              "onLoad"
-            ]
+            "alert": ["onKeyUp", "onKeyDown", "onKeyPress"],
+            "body": ["onError", "onLoad"],
+            "dialog": ["onKeyUp", "onKeyDown", "onKeyPress"],
+            "iframe": ["onError", "onLoad"],
+            "img": ["onError", "onLoad"]
           }
         ],
         "jsx-a11y/no-noninteractive-element-to-interactive-role": [
           "error",
           {
-            "ul": [
-              "listbox",
-              "menu",
-              "menubar",
-              "radiogroup",
-              "tablist",
-              "tree",
-              "treegrid"
-            ],
-            "ol": [
-              "listbox",
-              "menu",
-              "menubar",
-              "radiogroup",
-              "tablist",
-              "tree",
-              "treegrid"
-            ],
+            "ul": ["listbox", "menu", "menubar", "radiogroup", "tablist", "tree", "treegrid"],
+            "ol": ["listbox", "menu", "menubar", "radiogroup", "tablist", "tree", "treegrid"],
             "li": [
               "menuitem",
               "menuitemradio",
@@ -254,25 +209,16 @@
               "tab",
               "treeitem"
             ],
-            "table": [
-              "grid"
-            ],
-            "td": [
-              "gridcell"
-            ],
-            "fieldset": [
-              "radiogroup",
-              "presentation"
-            ]
+            "table": ["grid"],
+            "td": ["gridcell"],
+            "fieldset": ["radiogroup", "presentation"]
           }
         ],
         "jsx-a11y/no-noninteractive-tabindex": [
           "error",
           {
             "tags": [],
-            "roles": [
-              "tabpanel"
-            ],
+            "roles": ["tabpanel"],
             "allowExpressionValues": true
           }
         ],
@@ -530,10 +476,7 @@
             "allowRegExp": false
           }
         ],
-        "typescript/return-await": [
-          "error",
-          "error-handling-correctness-only"
-        ],
+        "typescript/return-await": ["error", "error-handling-correctness-only"],
         "typescript/strict-boolean-expressions": "error",
         "typescript/switch-exhaustiveness-check": "error",
         "typescript/triple-slash-reference": "error",
@@ -694,9 +637,7 @@
         "DisposableStack": "readonly",
         "SuppressedError": "readonly"
       },
-      "jsPlugins": [
-        { "name": "react-doctor", "specifier": "oxlint-plugin-react-doctor" }
-      ]
+      "jsPlugins": [{ "name": "react-doctor", "specifier": "oxlint-plugin-react-doctor" }]
     }
   ]
 }

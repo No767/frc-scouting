@@ -11,33 +11,11 @@
 	"files.associations": {
 		"*.css": "tailwindcss"
 	},
-	"[javascript]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[javascriptreact]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[typescript]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[typescriptreact]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[json]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[jsonc]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"[css]": {
-		"editor.defaultFormatter": "biomejs.biome"
-	},
-	"editor.codeActionsOnSave": {
-		"source.organizeImports.biome": "explicit"
-	},
-	"editor.defaultFormatter": "biomejs.biome",
+	"editor.defaultFormatter": "oxc.oxc-vscode",
 	"editor.formatOnSave": true,
+	"editor.formatOnSaveMode": "file",
 	"git.openRepositoryInParentFolders": "always",
 	"js/ts.tsdk.path": "./web/node_modules/typescript/lib",
-	"biome.lsp.bin": "${userHome}/.local/share/mise/installs/biome/"
+	"oxc.path.oxfmt": "${workspaceFolder}/web/node_modules/.bin/oxfmt",
+	"oxc.fmt.configPath": "${workspaceFolder}/web/.oxfmtrc.json"
 }

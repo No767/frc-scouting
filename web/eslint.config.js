@@ -1,10 +1,10 @@
+import pluginRouter from "@tanstack/eslint-plugin-router";
 import eslintPluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
 import oxlint from "eslint-plugin-oxlint";
-import pluginRouter from '@tanstack/eslint-plugin-router'
-import { defineConfig, globalIgnores } from "eslint/config";
 import reactDom from "eslint-plugin-react-dom";
 import reactJsx from "eslint-plugin-react-jsx";
 import reactX from "eslint-plugin-react-x";
+import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -12,11 +12,12 @@ export default defineConfig([
   globalIgnores([
     "node_modules",
     "dist",
+
     // Automatically generated code
     "src/routeTree.gen.ts",
 
     // Shadcn/ui components
-    "src/components/ui"
+    "src/components/ui",
   ]),
 
   {
@@ -27,7 +28,7 @@ export default defineConfig([
       eslintPluginBetterTailwindcss.configs.recommended,
       pluginRouter.configs["flat/recommended"],
 
-      oxlint.configs["flat/recommended"]
+      oxlint.configs["flat/recommended"],
     ],
     plugins: {
       "react-dom": reactDom,

@@ -80,8 +80,8 @@ export function Coral({ levels, setLevels, increment }: CoralProps) {
 					<CoralButton
 						key={i}
 						label={`L${i + 1}`}
-						level={levels[i]}
-						other={total - levels[i]}
+						level={levels[i] ?? 0}
+						other={total - (levels[i] ?? 0)}
 						setLevel={(v) => setAt(i, v)}
 						increment={increment}
 					/>

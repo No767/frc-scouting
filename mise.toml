@@ -14,7 +14,7 @@ alias = ["web:up"]
 description = "Start frontend development server. Save file(s) to see changes"
 env._.path = "./web/node_modules/.bin"
 dir = "{{ config_root }}/web"
-run = "vite"
+run = "vite dev --port 8000"
 
 [tasks."web:install"]
 description = "Pulls dependencies through pnpm"

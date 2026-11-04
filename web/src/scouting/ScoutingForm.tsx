@@ -457,7 +457,7 @@ export function ScoutingForm() {
 															<span className="text-xl font-bold">{event}</span>
 															<span className="flex items-center justify-center gap-1 text-xl font-bold">
 																<QualMatch className="size-8" />{" "}
-																{match.replace("qm", "")}
+																{match?.replace("qm", "")}
 																<Dot className="size-5" />
 																<Bot className="size-6.5" /> {m.team}
 															</span>
