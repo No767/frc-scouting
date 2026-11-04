@@ -151,9 +151,10 @@ export function ScoutingForm() {
   const team = fetchedTeam ?? (manualEntry.key === matchKey ? manualEntry.team : "");
   const lookupFailed = isError && fetchedTeam === undefined;
 
-  const canConfirm = Boolean(
-    scouterName && eventCode && matchNumber && position && team && !isLoading,
-  );
+  const matchReady = Boolean(scouterName && eventCode && matchNumber && position && team);
+  const canConfirm = matchReady && !isLoading;
+  // Rechecked after confirming so clearing a Start field can't save a QR code missing its match
+  const tabsLocked = !confirmed || !matchReady;
 
   const [autoCoral, setAutoCoral] = useState([0, 0, 0, 0]);
   const [teleCoral, setTeleCoral] = useState([0, 0, 0, 0]);
@@ -263,13 +264,13 @@ export function ScoutingForm() {
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="mx-auto">
             <TabsTrigger value="start">Start</TabsTrigger>
-            <TabsTrigger value="auto" disabled={!confirmed}>
+            <TabsTrigger value="auto" disabled={tabsLocked}>
               Auto
             </TabsTrigger>
-            <TabsTrigger value="tele" disabled={!confirmed}>
+            <TabsTrigger value="tele" disabled={tabsLocked}>
               Teleop
             </TabsTrigger>
-            <TabsTrigger value="qr" disabled={!confirmed}>
+            <TabsTrigger value="qr" disabled={tabsLocked}>
               QR
             </TabsTrigger>
             <TabsTrigger value="saved">Saved</TabsTrigger>
