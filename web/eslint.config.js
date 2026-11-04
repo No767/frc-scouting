@@ -1,4 +1,5 @@
 import pluginRouter from "@tanstack/eslint-plugin-router";
+import pluginQuery from "@tanstack/eslint-plugin-query";
 import eslintPluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
 import oxlint from "eslint-plugin-oxlint";
 import reactDom from "eslint-plugin-react-dom";
@@ -27,6 +28,7 @@ export default defineConfig([
 
       eslintPluginBetterTailwindcss.configs.recommended,
       pluginRouter.configs["flat/recommended"],
+      pluginQuery.configs["flat/recommended-strict"],
 
       oxlint.configs["flat/recommended"],
     ],
