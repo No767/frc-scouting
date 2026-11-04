@@ -4,7 +4,7 @@ A match scouting app for FRC. Scouts record match data on a phone or
 tablet, and the app generates a QR code that is scanned into a spreadsheet.
 No network connection is needed at the venue.
 
-Live site: <https://jsneer23.github.io/frc-scouting/>
+Live site: <https://no767.github.io/frc-scouting/>
 
 ## Setup
 
