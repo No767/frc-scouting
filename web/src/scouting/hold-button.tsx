@@ -40,11 +40,11 @@ export function HoldButton({
   variant,
 }: Readonly<HoldButtonProps>) {
   const [phase, setPhase] = useState<"idle" | "holding" | "done">("idle");
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const handleHoldStart = useCallback(() => {
     setPhase("holding");
-    timer.current = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setPhase("done");
       onComplete();
     }, HOLD_MS);
@@ -53,7 +53,7 @@ export function HoldButton({
   const handleHoldCancel = useCallback(() => {
     // The pointer also lifts after a completed hold, which must not undo "done"
     setPhase((current) => (current === "holding" ? "idle" : current));
-    clearTimeout(timer.current);
+    clearTimeout(timerRef.current);
   }, []);
 
   const labels = { idle: idleLabel, holding: "Keep holding…", done: doneLabel };
