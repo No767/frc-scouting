@@ -103,7 +103,7 @@
         "no-unused-labels": "error",
         "no-unused-private-class-members": "error",
         "no-unused-vars": "error",
-        "no-use-before-define": ["error", { "functions": false }],
+        "no-use-before-define": ["error", { "functions": false, "variables": false }],
         "no-useless-assignment": "error",
         "no-useless-backreference": "error",
         "no-useless-catch": "error",
@@ -367,6 +367,9 @@
         "react-perf/jsx-no-new-array-as-prop": "error",
         "react-perf/jsx-no-new-function-as-prop": "error",
         "react-perf/jsx-no-new-object-as-prop": "error",
+        "react-naming-convention/context-name": "warn",
+        "react-naming-convention/id-name": "warn",
+        "react-naming-convention/ref-name": "warn",
         "typescript/adjacent-overload-signatures": "error",
         "typescript/array-type": "error",
         "typescript/await-thenable": "error",
@@ -477,7 +480,10 @@
           }
         ],
         "typescript/return-await": ["error", "error-handling-correctness-only"],
-        "typescript/strict-boolean-expressions": "error",
+        "typescript/strict-boolean-expressions": [
+          "error",
+          { "allowNullableBoolean": true, "allowNullableString": true }
+        ],
         "typescript/switch-exhaustiveness-check": "error",
         "typescript/triple-slash-reference": "error",
         "typescript/unbound-method": "error",
@@ -637,7 +643,10 @@
         "DisposableStack": "readonly",
         "SuppressedError": "readonly"
       },
-      "jsPlugins": [{ "name": "react-doctor", "specifier": "oxlint-plugin-react-doctor" }]
+      "jsPlugins": [
+        "eslint-plugin-react-naming-convention",
+        { "name": "react-doctor", "specifier": "oxlint-plugin-react-doctor" }
+      ]
     }
   ]
 }
