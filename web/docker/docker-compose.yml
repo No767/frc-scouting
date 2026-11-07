@@ -1,0 +1,32 @@
+name: frc-scouting
+
+x-hardening: &hard
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=32m
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  website:
+    <<: *hard
+    container_name: frc-scouting
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      secrets:
+        - tbaApiKey
+    ports:
+      - 127.0.0.1:8080:8080
+    healthcheck:
+      test: wget -q -O /dev/null http://localhost:8080/ || exit 1
+      interval: 5m
+      start_interval: 30s
+      start_period: 5m
+    restart: always
+
+secrets:
+  tbaApiKey:
+    environment: VITE_TBA_API_KEY
