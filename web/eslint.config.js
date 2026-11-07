@@ -1,10 +1,11 @@
-import pluginRouter from "@tanstack/eslint-plugin-router";
 import pluginQuery from "@tanstack/eslint-plugin-query";
+import pluginRouter from "@tanstack/eslint-plugin-router";
 import eslintPluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
 import oxlint from "eslint-plugin-oxlint";
 import reactDom from "eslint-plugin-react-dom";
 import reactJsx from "eslint-plugin-react-jsx";
 import reactX from "eslint-plugin-react-x";
+import sonarjs from "eslint-plugin-sonarjs";
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -27,6 +28,7 @@ export default defineConfig([
       tseslint.configs.base,
 
       eslintPluginBetterTailwindcss.configs.recommended,
+      sonarjs.configs.recommended,
       pluginRouter.configs["flat/recommended"],
       pluginQuery.configs["flat/recommended-strict"],
 
@@ -45,6 +47,7 @@ export default defineConfig([
       "react-x/no-create-ref": "error",
       "react-x/no-forward-ref": "error",
       "react-x/no-use-context": "error",
+      "sonarjs/cognitive-complexity": "off",
 
       // TailwindCSS - Oxfmt handles these already
       "better-tailwindcss/enforce-consistent-class-order": "off",
@@ -62,6 +65,8 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: {
         parser: tseslint.parser,
+        project: ["./tsconfig.node.json", "./tsconfig.app.json"],
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },

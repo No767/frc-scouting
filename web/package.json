@@ -43,6 +43,7 @@
     "eslint-plugin-react-jsx": "^5.28.8",
     "eslint-plugin-react-naming-convention": "^5.28.8",
     "eslint-plugin-react-x": "^5.28.8",
+    "eslint-plugin-sonarjs": "^4.2.2",
     "globals": "^17.14.0",
     "oxc-transform-react": "^0.156.0",
     "oxfmt": "^0.75.0",
