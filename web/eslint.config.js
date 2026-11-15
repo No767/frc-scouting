@@ -2,6 +2,7 @@ import pluginQuery from "@tanstack/eslint-plugin-query";
 import pluginRouter from "@tanstack/eslint-plugin-router";
 import eslintPluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
 import oxlint from "eslint-plugin-oxlint";
+import perfectionist from "eslint-plugin-perfectionist";
 import reactDom from "eslint-plugin-react-dom";
 import reactJsx from "eslint-plugin-react-jsx";
 import reactX from "eslint-plugin-react-x";
@@ -35,6 +36,7 @@ export default defineConfig([
       oxlint.configs["flat/recommended"],
     ],
     plugins: {
+      perfectionist,
       "react-dom": reactDom,
       "react-jsx": reactJsx,
       "react-x": reactX,
@@ -49,6 +51,8 @@ export default defineConfig([
       "react-x/no-use-context": "error",
       "sonarjs/cognitive-complexity": "off",
 
+      "perfectionist/sort-named-imports": ["error", { groups: ["type-import", "value-import"] }],
+
       // TailwindCSS - Oxfmt handles these already
       "better-tailwindcss/enforce-consistent-class-order": "off",
       "better-tailwindcss/enforce-consistent-line-wrapping": "off",
@@ -59,6 +63,7 @@ export default defineConfig([
         cwd: import.meta.dirname,
         entryPoint: "src/styles.css",
       },
+      perfectionist: { type: "natural", order: "asc" },
     },
     languageOptions: {
       ecmaVersion: 2020,
