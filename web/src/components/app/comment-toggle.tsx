@@ -3,28 +3,6 @@ import { useCallback, useState } from "react";
 
 import { ToggleGroupItem } from "@/components/ui/toggle-group";
 
-export const COMMENTS = [
-  "Not on Field",
-  "Stopped Moving",
-  "Dead <45s",
-  "Dead >45s",
-  "Floor Pickup Algae",
-  "Floor Pickup Coral",
-  "Holds Both Game Pieces",
-  "Slow Drive",
-  "Fast Drive",
-  "Bad Driving",
-  "Good Driving",
-  "Drops Game Pieces",
-  "Lots of Fouls",
-  "Tipped",
-  "Didn't Move",
-  "Broken",
-  "Played Defense",
-  "Received Defense",
-  "Yellow Card",
-];
-
 interface CommentToggleProps {
   comment: string;
 }

@@ -14,6 +14,7 @@
   "dependencies": {
     "@base-ui/react": "^1.9.0",
     "@fontsource-variable/inter": "^5.3.0",
+    "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-query": "^5.106.1",
     "@tanstack/react-router": "1.170.45",
     "class-variance-authority": "^0.7.1",
@@ -39,6 +40,7 @@
     "eslint": "^10.14.0",
     "eslint-plugin-better-tailwindcss": "^4.10.0",
     "eslint-plugin-oxlint": "^1.90.0",
+    "eslint-plugin-perfectionist": "^5.13.0",
     "eslint-plugin-react-dom": "^5.28.8",
     "eslint-plugin-react-jsx": "^5.28.8",
     "eslint-plugin-react-naming-convention": "^5.28.8",

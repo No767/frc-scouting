@@ -1,12 +1,6 @@
 import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface BrandHeaderProps {
-  title: string;
-  description: string;
-  action?: React.ReactNode;
-}
-
-export function BrandHeader({ title, description, action }: Readonly<BrandHeaderProps>) {
+export function Header() {
   return (
     <CardHeader className="flex items-center gap-4">
       <img
@@ -16,10 +10,9 @@ export function BrandHeader({ title, description, action }: Readonly<BrandHeader
         className="shrink-0 rounded-lg"
       />
       <div className="grid gap-1.5">
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardTitle>FRC 5507 Scouting Form</CardTitle>
+        <CardDescription>Generate a scouting data QR code.</CardDescription>
       </div>
-      {action}
     </CardHeader>
   );
 }

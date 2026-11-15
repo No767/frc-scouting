@@ -9,50 +9,93 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as ScoutingRouteImport } from './routes/_scouting'
+import { Route as ScoutingIndexRouteImport } from './routes/_scouting/index'
+import { Route as ScoutingSavedRouteImport } from './routes/_scouting/saved'
 
-const IndexRoute = IndexRouteImport.update({
+const ScoutingRoute = ScoutingRouteImport.update({
+  id: '/_scouting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScoutingIndexRoute = ScoutingIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => ScoutingRoute,
+} as any)
+const ScoutingSavedRoute = ScoutingSavedRouteImport.update({
+  id: '/saved',
+  path: '/saved',
+  getParentRoute: () => ScoutingRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof ScoutingIndexRoute
+  '/saved': typeof ScoutingSavedRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/saved': typeof ScoutingSavedRoute
+  '/': typeof ScoutingIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_scouting': typeof ScoutingRouteWithChildren
+  '/_scouting/saved': typeof ScoutingSavedRoute
+  '/_scouting/': typeof ScoutingIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/saved'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/saved' | '/'
+  id: '__root__' | '/_scouting' | '/_scouting/saved' | '/_scouting/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  ScoutingRoute: typeof ScoutingRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_scouting': {
+      id: '/_scouting'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof ScoutingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_scouting/': {
+      id: '/_scouting/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ScoutingIndexRouteImport
+      parentRoute: typeof ScoutingRoute
+    }
+    '/_scouting/saved': {
+      id: '/_scouting/saved'
+      path: '/saved'
+      fullPath: '/saved'
+      preLoaderRoute: typeof ScoutingSavedRouteImport
+      parentRoute: typeof ScoutingRoute
     }
   }
 }
 
+interface ScoutingRouteChildren {
+  ScoutingSavedRoute: typeof ScoutingSavedRoute
+  ScoutingIndexRoute: typeof ScoutingIndexRoute
+}
+
+const ScoutingRouteChildren: ScoutingRouteChildren = {
+  ScoutingSavedRoute: ScoutingSavedRoute,
+  ScoutingIndexRoute: ScoutingIndexRoute,
+}
+
+const ScoutingRouteWithChildren = ScoutingRoute._addFileChildren(
+  ScoutingRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  ScoutingRoute: ScoutingRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
