@@ -8,8 +8,16 @@ import { Button } from "@/components/ui/button";
 interface HoldButtonProps {
   disabled?: boolean;
   onComplete: () => void;
+  /**
+   * Status of the work `onComplete` starts. The caller owns it; a useMutation `status` fits as is.
+   * The button shows it only after its own hold completes, so a status left over from an earlier
+   * hold isn't shown on a fresh button.
+   */
+  status: "idle" | "pending" | "success" | "error";
   idleLabel: string;
   doneLabel: string;
+  /** Shown when `status` is "error". Leave it out when the work can't fail. */
+  failedLabel?: string;
   variant: keyof typeof HOLD_COLORS;
 }
 
@@ -20,12 +28,16 @@ const HOLD_COLORS = {
   primary: {
     idle: "border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground",
     holding: "bg-primary text-primary-foreground",
-    done: "bg-primary text-primary-foreground",
+    pending: "bg-primary text-primary-foreground",
+    success: "bg-primary text-primary-foreground",
+    error: "border-destructive/30 bg-destructive/10 text-destructive",
   },
   destructive: {
     idle: "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white",
     holding: "bg-destructive text-white hover:bg-destructive hover:text-white",
-    done: "bg-destructive text-primary-foreground hover:bg-destructive hover:text-white",
+    pending: "bg-destructive text-white hover:bg-destructive hover:text-white",
+    success: "bg-destructive text-primary-foreground hover:bg-destructive hover:text-white",
+    error: "border-destructive bg-destructive/10 text-destructive",
   },
 };
 const HOLD_FILL_IDLE_STYLE = { width: "0%", transition: "none" };
@@ -35,13 +47,16 @@ const HOLD_FILL_ACTIVE_STYLE = {
 };
 
 export function HoldButton({
-  disabled,
+  disabled = false,
   onComplete,
+  status,
   idleLabel,
   doneLabel,
+  failedLabel,
   variant,
 }: Readonly<HoldButtonProps>) {
-  const [phase, setPhase] = useState<"idle" | "holding" | "done">("idle");
+  const [phase, setPhase] = useState<"idle" | "holding" | "held">("idle");
+  const shown = phase === "held" ? status : phase;
 
   const handleHoldStart = useCallback(() => {
     setPhase("holding");
@@ -52,21 +67,22 @@ export function HoldButton({
   }, []);
 
   const handleFillEnd = useCallback(() => {
-    setPhase("done");
+    setPhase("held");
     onComplete();
   }, [onComplete]);
 
   return (
     <Button
-      disabled={disabled}
+      // A press while the work is running would start it twice.
+      disabled={disabled || shown === "pending"}
       onPointerDown={handleHoldStart}
       onPointerUp={handleHoldCancel}
       onPointerLeave={handleHoldCancel}
       onPointerCancel={handleHoldCancel}
       className={cn(
         "relative overflow-hidden select-none",
-        phase === "idle" && "border-border bg-background text-secondary-foreground",
-        HOLD_COLORS[variant][phase],
+        shown === "idle" && "border-border bg-background text-secondary-foreground",
+        HOLD_COLORS[variant][shown],
       )}
     >
       <span
@@ -75,14 +91,20 @@ export function HoldButton({
         onTransitionEnd={handleFillEnd}
       />
       <span className="relative grid">
-        <span className={cn("col-start-1 row-start-1", phase !== "idle" && "invisible")}>
+        <span className={cn("col-start-1 row-start-1", shown !== "idle" && "invisible")}>
           {idleLabel}
         </span>
-        <span className={cn("col-start-1 row-start-1", phase !== "holding" && "invisible")}>
+        <span className={cn("col-start-1 row-start-1", shown !== "holding" && "invisible")}>
           Keep holding…
         </span>
-        <span className={cn("col-start-1 row-start-1", phase !== "done" && "invisible")}>
+        <span className={cn("col-start-1 row-start-1", shown !== "pending" && "invisible")}>
+          Working…
+        </span>
+        <span className={cn("col-start-1 row-start-1", shown !== "success" && "invisible")}>
           {doneLabel}
+        </span>
+        <span className={cn("col-start-1 row-start-1", shown !== "error" && "invisible")}>
+          {failedLabel}
         </span>
       </span>
     </Button>

@@ -57,7 +57,7 @@ interface StepNodeProps {
 
 /// Constants - stable data
 
-const TEXT_FIELDS = ["start.scouterName", "start.matchNumber", "start.team", "notes"] as const;
+const TEXT_FIELDS = ["start.scouterName", "start.team", "notes"] as const;
 
 /// Constants - validators
 
@@ -90,13 +90,17 @@ const tbaMatchSchema = z.object({
 
 /// Tanstack Query options
 
-const teamQueryOptions = (eventCode: EventCode, matchNumber: string, position: Position | null) =>
+const teamQueryOptions = (
+  eventCode: EventCode,
+  matchNumber: number | null,
+  position: Position | null,
+) =>
   queryOptions({
     queryKey: ["teams", eventCode, matchNumber, position],
     queryFn:
-      matchNumber && position
+      matchNumber !== null && position
         ? async ({ signal }) => {
-            const res = await fetch(`${TBA_API_URL}/match/${eventCode}_qm${matchNumber}`, {
+            const res = await fetch(`${TBA_API_URL}/match/${eventCode}_qm${String(matchNumber)}`, {
               headers: { "X-TBA-Auth-Key": TBA_KEY },
               signal: AbortSignal.any([signal, AbortSignal.timeout(TBA_TIMEOUT_MS)]),
             });
@@ -148,7 +152,7 @@ function StepNode({ value, label, current, disabled, onSelect }: Readonly<StepNo
 /// Route
 
 function ScoutingIndexPage() {
-  const { form, step, setStep, confirmed, setConfirmed } = useScouting();
+  const { form, step, setStep, confirmed, setConfirmed, saveStatus } = useScouting();
 
   const eventCode = useSelector(form.store, (state) => state.values.start.eventCode);
   const matchNumber = useSelector(form.store, (state) => state.values.start.matchNumber);
@@ -205,6 +209,16 @@ function ScoutingIndexPage() {
   const handleEventCodeChange = useCallback(
     (value: EventCode | null) => {
       if (value) form.setFieldValue("start.eventCode", value);
+    },
+    [form],
+  );
+
+  const handleMatchNumberChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      // An empty number input reads as NaN, which the form stores as null.
+      const { valueAsNumber } = event.target;
+      // oxlint-disable-next-line unicorn/no-null
+      form.setFieldValue("start.matchNumber", Number.isNaN(valueAsNumber) ? null : valueAsNumber);
     },
     [form],
   );
@@ -329,12 +343,13 @@ function ScoutingIndexPage() {
                     <Input
                       id="matchNumber"
                       name="start.matchNumber"
+                      type="number"
                       inputMode="numeric"
                       placeholder="Match number"
                       aria-label="Match Number"
                       aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value}
-                      onChange={handleText}
+                      value={field.state.value ?? ""}
+                      onChange={handleMatchNumberChange}
                     />
                     {field.state.meta.isTouched && !field.state.meta.isValid && (
                       <FieldError errors={field.state.meta.errors} />
@@ -418,6 +433,8 @@ function ScoutingIndexPage() {
                   onComplete={handleConfirmHold}
                   idleLabel={confirmed ? "Confirmed" : "Hold to confirm"}
                   doneLabel="Confirmed!"
+                  // An invalid start step leaves confirmed false, so the button doesn't claim it.
+                  status={confirmed ? "success" : "idle"}
                   variant="primary"
                 />
               </Field>
@@ -544,6 +561,8 @@ function ScoutingIndexPage() {
                     onComplete={handleSave}
                     idleLabel="Hold to save QR code"
                     doneLabel="Saved!"
+                    failedLabel="Not saved. Your entries are still here, hold to try again"
+                    status={saveStatus}
                     variant="primary"
                   />
                   <form.Field name="endgame">
