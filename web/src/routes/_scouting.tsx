@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { createStore, set, values } from "idb-keyval";
+import { openDB } from "idb";
 import { type Dispatch, type SetStateAction, createContext, use, useMemo, useState } from "react";
 import { z } from "zod";
 
@@ -97,18 +97,11 @@ const BLANK_SCOUTING_FORM: ScoutingFormValues = {
   notes: "",
 };
 
-/// Constants - storage
-
-// Saved matches get a database of their own. idb-keyval opens it on first use, and can't add a
-// second object store to an existing database, so the phase 2 TBA cache opens its own.
-export const SAVED_MATCHES_STORE = createStore("saved-matches", "matches");
-
 /// Zod schemas
 
 export const startSchema = z.object({
   scouterName: z.string().trim().min(1, "Enter your name."),
   eventCode: z.enum(EVENT_CODES.map((event) => event.value)),
-  // Quals only, so the "qm" in TBA's match key is fixed and only the number is stored.
   matchNumber: z
     .number()
     .nullable()
@@ -139,9 +132,6 @@ const scoutingFormSchema = z.object({
   notes: z.string(),
 });
 
-// One saved match as stored in IndexedDB: the form's validated values plus when it was saved.
-// Derived from the form schema, so a new form field is stored with no second edit. The QR string
-// is not stored; /saved builds it with toQrData.
 const savedMatchSchema = scoutingFormSchema.extend({
   savedAt: z.number(),
 });
@@ -165,7 +155,6 @@ export const ScoutingContext = createContext<ScoutingState | undefined>(undefine
 
 /// Helper functions
 
-/** The IndexedDB key of a saved match, for example "2026cacac_qm1_R1". */
 export function savedMatchKey(start: SavedMatch["start"]) {
   return `${start.eventCode}_qm${String(start.matchNumber)}_${start.position}`;
 }
@@ -193,31 +182,27 @@ export function toQrData(formValues: ScoutingFormValues) {
 
 /// Tanstack Query options
 
-// Every saved match on this device, newest first. This queryFn is the only reader of IndexedDB and
-// the only place stored rows are parsed. A row that doesn't fit the schema (saved by a build with
-// another field list) is skipped, as readSavedMatches did with localStorage.
 export const savedMatchesQueryOptions = queryOptions({
   queryKey: ["savedMatches"],
   queryFn: async () => {
-    const rows = await values(SAVED_MATCHES_STORE);
-    return (
-      rows
-        .flatMap((row) => {
-          const result = savedMatchSchema.safeParse(row);
-          if (!result.success) return [];
-          return [result.data];
-        })
-        // IndexedDB returns key order, which puts qm10 before qm2.
-        .toSorted((a, b) => b.savedAt - a.savedAt)
-    );
+    const db = await openDB("saved-matches", undefined, {
+      upgrade: (database) => {
+        database.createObjectStore("matches");
+      },
+    });
+    const rows = await db.getAll("matches");
+    db.close();
+    return rows
+      .flatMap((row) => {
+        const result = savedMatchSchema.safeParse(row);
+        if (!result.success) return [];
+        return [result.data];
+      })
+      .toSorted((a, b) => b.savedAt - a.savedAt);
   },
-  // Only this app writes the store, and its own writes invalidate this query. Another tab's saves
-  // show up when this tab becomes visible again.
   staleTime: Infinity,
   refetchOnWindowFocus: "always",
-  // A local read that failed won't succeed on a backoff retry.
   retry: false,
-  // The default "online" pauses the read while the browser reports offline.
   networkMode: "always",
 });
 
@@ -238,15 +223,17 @@ function ScoutingPage() {
 
   const queryClient = useQueryClient();
 
-  // idb-keyval's set is one put in one readwrite transaction and resolves on transaction complete,
-  // so success means the match is committed. Saving the same key again replaces the record.
-  // The form resets only on success. If the write fails, the match stays in the form and the save
-  // button shows saveStatus "error".
   const { mutate: saveMatch, status: saveStatus } = useMutation({
     mutationFn: async (formValues: ScoutingFormValues) => {
-      // TanStack Form hands onSubmit the schema's input type; parse to get the stored type.
       const match = savedMatchSchema.parse({ ...formValues, savedAt: Date.now() });
-      await set(savedMatchKey(match.start), match, SAVED_MATCHES_STORE);
+      const db = await openDB("saved-matches", undefined, {
+        upgrade: (database) => {
+          database.createObjectStore("matches");
+        },
+      });
+      await db.put("matches", match, savedMatchKey(match.start));
+      db.close();
+
       return match;
     },
     onSuccess: ({ start }) => {

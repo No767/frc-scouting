@@ -180,8 +180,8 @@ export const schedulePersister: Persister = {
 
     if (schedules.length === 0) return;
 
-    const database = await openDB<ScheduleDatabase>(SCHEDULE_DATABASE);
-    const transaction = database.transaction(
+    const db = await openDB<ScheduleDatabase>(SCHEDULE_DATABASE);
+    const transaction = db.transaction(
       schedules.map((schedule) => schedule.queryKey[1]),
       "readwrite",
     );
@@ -199,17 +199,17 @@ export const schedulePersister: Persister = {
       transaction.done,
     ]);
 
-    database.close();
+    db.close();
   },
   restoreClient: async () => {
-    const database = await openDB<ScheduleDatabase>(SCHEDULE_DATABASE, SCHEDULE_DATABASE_VERSION, {
-      upgrade: (upgradingDatabase, oldVersion) => {
+    const db = await openDB<ScheduleDatabase>(SCHEDULE_DATABASE, SCHEDULE_DATABASE_VERSION, {
+      upgrade: (database, oldVersion) => {
         if (oldVersion < 1) {
-          for (const event of EVENT_CODES) upgradingDatabase.createObjectStore(event.value);
+          for (const event of EVENT_CODES) database.createObjectStore(event.value);
         }
       },
     });
-    const transaction = database.transaction(
+    const transaction = db.transaction(
       EVENT_CODES.map((event) => event.value),
       "readonly",
     );
@@ -223,7 +223,7 @@ export const schedulePersister: Persister = {
         };
       }),
     );
-    database.close();
+    db.close();
 
     const client = new QueryClient();
     for (const store of entries) {
@@ -234,16 +234,16 @@ export const schedulePersister: Persister = {
     return { timestamp: Date.now(), buster: "", clientState: dehydrate(client) };
   },
   removeClient: async () => {
-    const database = await openDB<ScheduleDatabase>(SCHEDULE_DATABASE);
-    const storeNames = [...database.objectStoreNames];
+    const db = await openDB<ScheduleDatabase>(SCHEDULE_DATABASE);
+    const storeNames = [...db.objectStoreNames];
     if (storeNames.length > 0) {
-      const transaction = database.transaction(storeNames, "readwrite");
+      const transaction = db.transaction(storeNames, "readwrite");
       await Promise.all([
         ...storeNames.map((storeName) => transaction.objectStore(storeName).clear()),
         transaction.done,
       ]);
     }
-    database.close();
+    db.close();
   },
 };
 

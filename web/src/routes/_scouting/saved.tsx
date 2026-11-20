@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { clear } from "idb-keyval";
+import { openDB } from "idb";
 import { Bot, Dot, FaceSlightlyFrowning, Flag, MapPin, Skull, Trash2, User } from "lucide-react";
 import { useCallback, useState } from "react";
 
@@ -26,12 +26,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import {
-  SAVED_MATCHES_STORE,
-  savedMatchesQueryOptions,
-  savedMatchKey,
-  toQrData,
-} from "@/routes/_scouting";
+import { savedMatchesQueryOptions, savedMatchKey, toQrData } from "@/routes/_scouting";
 
 export const Route = createFileRoute("/_scouting/saved")({
   component: ScoutingSavedPage,
@@ -49,10 +44,16 @@ function ScoutingSavedPage() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  // The dialog closes only once the clear has committed. If it fails, it stays open and the hold
-  // button shows deleteStatus "error".
   const { mutate: deleteSavedMatches, status: deleteStatus } = useMutation({
-    mutationFn: () => clear(SAVED_MATCHES_STORE),
+    mutationFn: async () => {
+      const db = await openDB("saved-matches", undefined, {
+        upgrade: (database) => {
+          database.createObjectStore("matches");
+        },
+      });
+      await db.clear("matches");
+      db.close();
+    },
     onSuccess: () => {
       setDeleteOpen(false);
       return queryClient.invalidateQueries({ queryKey: savedMatchesQueryOptions.queryKey });
