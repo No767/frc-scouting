@@ -1,7 +1,9 @@
 import { useFormGroup, useSelector } from "@tanstack/react-form";
-import { queryOptions, skipToken, useQuery } from "@tanstack/react-query";
+import { dehydrate, QueryClient, queryOptions, useQuery } from "@tanstack/react-query";
+import { type Persister } from "@tanstack/react-query-persist-client";
 import { createFileRoute } from "@tanstack/react-router";
 import { cn } from "cn";
+import { openDB } from "idb";
 import { Bot, Dot, MapPin, User } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo } from "react";
 import { z } from "zod";
@@ -46,6 +48,14 @@ export const Route = createFileRoute("/_scouting/")({
 
 type EventCode = (typeof EVENT_CODES)[number]["value"];
 type Position = (typeof POSITIONS)[number]["value"];
+type MatchRow = z.infer<typeof matchRowSchema>;
+type ScheduleDatabase = Record<EventCode, { key: string; value: unknown }>;
+
+interface ScheduleEntry {
+  eventCode: EventCode;
+  matchKey: string;
+  matchRow: MatchRow;
+}
 
 interface StepNodeProps {
   value: Step;
@@ -57,7 +67,16 @@ interface StepNodeProps {
 
 /// Constants - stable data
 
-const TEXT_FIELDS = ["start.scouterName", "start.matchNumber", "start.team", "notes"] as const;
+const TEXT_FIELDS = ["start.scouterName", "start.team", "notes"] as const;
+
+const ALLIANCE_POSITIONS: Record<Position, { alliance: keyof MatchRow; position: number }> = {
+  R1: { alliance: "red", position: 0 },
+  R2: { alliance: "red", position: 1 },
+  R3: { alliance: "red", position: 2 },
+  B1: { alliance: "blue", position: 0 },
+  B2: { alliance: "blue", position: 1 },
+  B3: { alliance: "blue", position: 2 },
+};
 
 /// Constants - validators
 
@@ -69,51 +88,164 @@ const POSITION_VALIDATORS = { onMount: startSchema.shape.position };
 const manualTeamSchema = z.string().regex(/^\d+$/u, "Enter a team number.");
 const TEAM_VALIDATORS = { onMount: manualTeamSchema, onChange: manualTeamSchema };
 
+/// Constants - IndexedDB related
+
+const SCHEDULE_DATABASE = "tba-schedules";
+const SCHEDULE_DATABASE_VERSION = 1;
+
 /// Constants - regular
 
 const TBA_API_URL = "https://www.thebluealliance.com/api/v3";
 const TBA_KEY = import.meta.env.VITE_TBA_API_KEY;
 const TBA_TIMEOUT_MS = 5000;
 
+/// Tanstack Query keys
+
+const scheduleKeys = {
+  all: ["schedule"] as const,
+  event: (eventCode: EventCode) => [...scheduleKeys.all, eventCode] as const,
+};
+
 /// Zod schemas
 
-const allianceSchema = z.object({
-  team_keys: z.array(z.string()),
-});
+const teamNumbersSchema = z.array(z.string());
+const matchRowSchema = z.object({ red: teamNumbersSchema, blue: teamNumbersSchema });
 
-const tbaMatchSchema = z.object({
-  alliances: z.object({
-    red: allianceSchema,
-    blue: allianceSchema,
-  }),
+const allianceSchema = z
+  .object({ team_keys: z.array(z.string().transform((teamKey) => teamKey.replace("frc", ""))) })
+  .transform((alliance) => alliance.team_keys);
+
+const scheduleSchema = z.record(z.string(), matchRowSchema);
+const tbaScheduleSchema = z
+  .array(
+    z.object({
+      key: z.string().transform((matchKey) => matchKey.slice(matchKey.indexOf("_") + 1)),
+      alliances: z.object({ red: allianceSchema, blue: allianceSchema }),
+    }),
+  )
+  .transform((matches) => Object.fromEntries(matches.map((match) => [match.key, match.alliances])));
+
+const savedScheduleSchema = z
+  .object({ matchKeys: z.array(z.string()), matchRows: z.array(z.unknown()) })
+  .transform((savedSchedule) =>
+    Object.fromEntries(
+      savedSchedule.matchKeys.map((matchKey, index) => [
+        matchKey,
+        matchRowSchema.parse(savedSchedule.matchRows[index]),
+      ]),
+    ),
+  );
+
+const savedScheduleQuerySchema = z.object({
+  queryKey: z.tuple([z.literal("schedule"), startSchema.shape.eventCode]),
+  state: z.object({ data: scheduleSchema }),
 });
 
 /// Tanstack Query options
 
-const teamQueryOptions = (eventCode: EventCode, matchNumber: string, position: Position | null) =>
+const teamQueryOptions = (
+  eventCode: EventCode,
+  matchNumber: number | null,
+  position: Position | null,
+) =>
   queryOptions({
-    queryKey: ["teams", eventCode, matchNumber, position],
-    queryFn:
-      matchNumber && position
-        ? async ({ signal }) => {
-            const res = await fetch(`${TBA_API_URL}/match/${eventCode}_qm${matchNumber}`, {
-              headers: { "X-TBA-Auth-Key": TBA_KEY },
-              signal: AbortSignal.any([signal, AbortSignal.timeout(TBA_TIMEOUT_MS)]),
-            });
-            if (!res.ok) throw new Error(`TBA returned ${String(res.status)}`);
+    queryKey: ["schedule", eventCode],
+    queryFn: async ({ signal }) => {
+      const response = await fetch(`${TBA_API_URL}/event/${eventCode}/matches/simple`, {
+        headers: { "X-TBA-Auth-Key": TBA_KEY },
+        signal: AbortSignal.any([signal, AbortSignal.timeout(TBA_TIMEOUT_MS)]),
+      });
+      if (!response.ok) throw new Error(`TBA returned ${String(response.status)}`);
 
-            const match = tbaMatchSchema.parse(await res.json());
-            const alliance = position.startsWith("R") ? "red" : "blue";
-            const teamKey = match.alliances[alliance].team_keys[Number(position.slice(1)) - 1];
-            if (teamKey === undefined) throw new Error(`TBA has no team at ${position}`);
-
-            return teamKey.replace("frc", "");
-          }
-        : skipToken,
-    retry: false,
-    networkMode: "always",
-    gcTime: Infinity,
+      return tbaScheduleSchema.parse(await response.json());
+    },
+    select: (schedule) => {
+      if (matchNumber === null || position === null) return;
+      const team = ALLIANCE_POSITIONS[position];
+      return schedule[`qm${String(matchNumber)}`]?.[team.alliance][team.position];
+    },
+    staleTime: Infinity,
+    retryDelay: (attempt) => 500 * 2 ** attempt,
   });
+
+/// Persister
+
+export const schedulePersister: Persister = {
+  persistClient: async (client) => {
+    const schedules = client.clientState.queries.flatMap((query) => {
+      const result = savedScheduleQuerySchema.safeParse(query);
+      if (!result.success) return [];
+      return [result.data];
+    });
+
+    if (schedules.length === 0) return;
+
+    const db = await openDB<ScheduleDatabase>(SCHEDULE_DATABASE);
+    const transaction = db.transaction(
+      schedules.map((schedule) => schedule.queryKey[1]),
+      "readwrite",
+    );
+    const entries: ScheduleEntry[] = schedules.flatMap((schedule) =>
+      Object.entries(schedule.state.data).map(([matchKey, matchRow]) => ({
+        eventCode: schedule.queryKey[1],
+        matchKey: matchKey,
+        matchRow: matchRow,
+      })),
+    );
+    await Promise.all([
+      ...entries.map(({ eventCode, matchKey, matchRow }) =>
+        transaction.objectStore(eventCode).put(matchRow, matchKey),
+      ),
+      transaction.done,
+    ]);
+
+    db.close();
+  },
+  restoreClient: async () => {
+    const db = await openDB<ScheduleDatabase>(SCHEDULE_DATABASE, SCHEDULE_DATABASE_VERSION, {
+      upgrade: (database, oldVersion) => {
+        if (oldVersion < 1) {
+          for (const event of EVENT_CODES) database.createObjectStore(event.value);
+        }
+      },
+    });
+    const transaction = db.transaction(
+      EVENT_CODES.map((event) => event.value),
+      "readonly",
+    );
+    const entries = await Promise.all(
+      EVENT_CODES.map(async (event) => {
+        const store = transaction.objectStore(event.value);
+        return {
+          eventCode: event.value,
+          matchKeys: await store.getAllKeys(),
+          matchRows: await store.getAll(),
+        };
+      }),
+    );
+    db.close();
+
+    const client = new QueryClient();
+    for (const store of entries) {
+      if (store.matchKeys.length > 0) {
+        client.setQueryData(scheduleKeys.event(store.eventCode), savedScheduleSchema.parse(store));
+      }
+    }
+    return { timestamp: Date.now(), buster: "", clientState: dehydrate(client) };
+  },
+  removeClient: async () => {
+    const db = await openDB<ScheduleDatabase>(SCHEDULE_DATABASE);
+    const storeNames = [...db.objectStoreNames];
+    if (storeNames.length > 0) {
+      const transaction = db.transaction(storeNames, "readwrite");
+      await Promise.all([
+        ...storeNames.map((storeName) => transaction.objectStore(storeName).clear()),
+        transaction.done,
+      ]);
+    }
+    db.close();
+  },
+};
 
 /// Components
 
@@ -148,25 +280,21 @@ function StepNode({ value, label, current, disabled, onSelect }: Readonly<StepNo
 /// Route
 
 function ScoutingIndexPage() {
-  const { form, step, setStep, confirmed, setConfirmed } = useScouting();
+  const { form, step, setStep, confirmed, setConfirmed, saveStatus } = useScouting();
 
   const eventCode = useSelector(form.store, (state) => state.values.start.eventCode);
   const matchNumber = useSelector(form.store, (state) => state.values.start.matchNumber);
   const position = useSelector(form.store, (state) => state.values.start.position);
 
-  const {
-    data: fetchedTeam,
-    isError,
-    isLoading,
-  } = useQuery(teamQueryOptions(eventCode, matchNumber, position));
+  const { data: team, isLoading } = useQuery(teamQueryOptions(eventCode, matchNumber, position));
 
   const handleConfirm = useCallback(
     ({ value }: { value: z.input<typeof startSchema> }) => {
-      form.setFieldValue("start.team", fetchedTeam ?? value.team);
+      form.setFieldValue("start.team", team ?? value.team);
       setConfirmed(true);
       setStep("auto");
     },
-    [fetchedTeam, form, setConfirmed, setStep],
+    [team, form, setConfirmed, setStep],
   );
   const startGroup = useFormGroup({
     form,
@@ -209,6 +337,17 @@ function ScoutingIndexPage() {
     [form],
   );
 
+  const handleMatchNumberChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const { valueAsNumber } = event.target;
+
+      // An empty number input reads as NaN, which the form stores as null.
+      // oxlint-disable-next-line unicorn/no-null
+      form.setFieldValue("start.matchNumber", Number.isNaN(valueAsNumber) ? null : valueAsNumber);
+    },
+    [form],
+  );
+
   const handlePositionChange = useCallback(
     (value: Position | null) => {
       form.setFieldValue("start.position", value);
@@ -244,9 +383,10 @@ function ScoutingIndexPage() {
     [form],
   );
 
-  const enterTeamManually = isError && fetchedTeam === undefined;
+  const enterTeamManually =
+    matchNumber !== null && position !== null && !isLoading && team === undefined;
   const teamPlaceholder = isLoading ? "Looking up…" : "Pick an event, match, and position";
-  const message = fetchedTeam ?? teamPlaceholder;
+  const message = team ?? teamPlaceholder;
 
   return (
     <Card className="mx-auto w-full max-w-2xl gap-4">
@@ -329,12 +469,13 @@ function ScoutingIndexPage() {
                     <Input
                       id="matchNumber"
                       name="start.matchNumber"
+                      type="number"
                       inputMode="numeric"
                       placeholder="Match number"
                       aria-label="Match Number"
                       aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                      value={field.state.value}
-                      onChange={handleText}
+                      value={field.state.value ?? ""}
+                      onChange={handleMatchNumberChange}
                     />
                     {field.state.meta.isTouched && !field.state.meta.isValid && (
                       <FieldError errors={field.state.meta.errors} />
@@ -418,6 +559,7 @@ function ScoutingIndexPage() {
                   onComplete={handleConfirmHold}
                   idleLabel={confirmed ? "Confirmed" : "Hold to confirm"}
                   doneLabel="Confirmed!"
+                  status={confirmed ? "success" : "idle"}
                   variant="primary"
                 />
               </Field>
@@ -544,6 +686,8 @@ function ScoutingIndexPage() {
                     onComplete={handleSave}
                     idleLabel="Hold to save QR code"
                     doneLabel="Saved!"
+                    failedLabel="Not saved. Your entries are still here, hold to try again"
+                    status={saveStatus}
                     variant="primary"
                   />
                   <form.Field name="endgame">

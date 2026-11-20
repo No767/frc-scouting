@@ -1,4 +1,6 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { openDB } from "idb";
 import { Bot, Dot, FaceSlightlyFrowning, Flag, MapPin, Skull, Trash2, User } from "lucide-react";
 import { useCallback, useState } from "react";
 
@@ -24,7 +26,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { readSavedMatches, SAVED_MATCHES_KEY } from "@/routes/_scouting";
+import { savedMatchesQueryOptions, savedMatchKey, toQrData } from "@/routes/_scouting";
 
 export const Route = createFileRoute("/_scouting/saved")({
   component: ScoutingSavedPage,
@@ -37,14 +39,30 @@ const DELETE_TRIGGER = <Button variant="destructive" />;
 /// Route
 
 function ScoutingSavedPage() {
-  const [saved, setSaved] = useState(readSavedMatches);
+  const queryClient = useQueryClient();
+  const { data: saved = [], isSuccess, isError } = useQuery(savedMatchesQueryOptions);
+
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const { mutate: deleteSavedMatches, status: deleteStatus } = useMutation({
+    mutationFn: async () => {
+      const db = await openDB("saved-matches", undefined, {
+        upgrade: (database) => {
+          database.createObjectStore("matches");
+        },
+      });
+      await db.clear("matches");
+      db.close();
+    },
+    onSuccess: () => {
+      setDeleteOpen(false);
+      return queryClient.invalidateQueries({ queryKey: savedMatchesQueryOptions.queryKey });
+    },
+    networkMode: "always",
+  });
   const handleDeleteSaved = useCallback(() => {
-    localStorage.removeItem(SAVED_MATCHES_KEY);
-    setSaved([]);
-    setDeleteOpen(false);
-  }, []);
+    deleteSavedMatches();
+  }, [deleteSavedMatches]);
 
   const savedLabel = saved.length === 1 ? "1 saved match" : `${String(saved.length)} saved matches`;
 
@@ -53,36 +71,39 @@ function ScoutingSavedPage() {
       <Header />
       <CardContent>
         <div className="px-12">
-          {saved.length === 0 ? (
+          {isError && (
+            <p className="text-center text-sm text-destructive">
+              Couldn't read saved matches on this device.
+            </p>
+          )}
+          {isSuccess && saved.length === 0 && (
             <span className="flex items-center justify-center gap-1 text-xl font-bold">
               No QR codes saved
               <FaceSlightlyFrowning />
             </span>
-          ) : (
+          )}
+          {saved.length > 0 && (
             <div className="text-center">
               <Carousel className="mx-auto w-full max-w-xs">
                 <CarouselContent>
-                  {saved.map((m) => {
-                    const [event, match, pos] = m.key.split("_");
-                    return (
-                      <CarouselItem key={m.key}>
-                        <div className="flex flex-col items-center gap-2">
-                          <span className="text-xl font-bold">{event}</span>
-                          <span className="flex items-center justify-center gap-1 text-xl font-bold">
-                            QM {match?.replace("qm", "")}
-                            <Dot className="size-5" />
-                            <Bot className="size-6.5" /> {m.team}
-                          </span>
-                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <MapPin className="size-4" /> {pos}
-                            <Dot className="size-4" />
-                            <User className="size-4" /> {m.scouter}
-                          </span>
-                          <QRCode value={m.qrData} />
-                        </div>
-                      </CarouselItem>
-                    );
-                  })}
+                  {saved.map((m) => (
+                    <CarouselItem key={savedMatchKey(m.start)}>
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-xl font-bold">{m.start.eventCode}</span>
+                        <span className="flex items-center justify-center gap-1 text-xl font-bold">
+                          QM {m.start.matchNumber}
+                          <Dot className="size-5" />
+                          <Bot className="size-6.5" /> {m.start.team}
+                        </span>
+                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="size-4" /> {m.start.position}
+                          <Dot className="size-4" />
+                          <User className="size-4" /> {m.start.scouterName}
+                        </span>
+                        <QRCode value={toQrData(m)} />
+                      </div>
+                    </CarouselItem>
+                  ))}
                 </CarouselContent>
                 <CarouselPrevious />
                 <CarouselNext />
@@ -115,6 +136,8 @@ function ScoutingSavedPage() {
                         variant="destructive"
                         idleLabel={`Hold to delete ${savedLabel}`}
                         doneLabel="Deleted"
+                        failedLabel="Not deleted. Hold to try again"
+                        status={deleteStatus}
                         onComplete={handleDeleteSaved}
                       />
                     </AlertDialogFooter>

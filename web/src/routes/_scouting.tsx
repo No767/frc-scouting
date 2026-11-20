@@ -1,5 +1,12 @@
 import { createFormHook, createFormHookContexts, formOptions } from "@tanstack/react-form";
+import {
+  type MutationStatus,
+  queryOptions,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { openDB } from "idb";
 import { type Dispatch, type SetStateAction, createContext, use, useMemo, useState } from "react";
 import { z } from "zod";
 
@@ -18,6 +25,7 @@ interface ScoutingState {
   setStep: Dispatch<SetStateAction<Step>>;
   confirmed: boolean;
   setConfirmed: Dispatch<SetStateAction<boolean>>;
+  saveStatus: MutationStatus;
 }
 
 /// Constants - metadata
@@ -74,7 +82,9 @@ const BLANK_SCOUTING_FORM: ScoutingFormValues = {
   start: {
     scouterName: "",
     eventCode: "2026cacac",
-    matchNumber: "",
+    // null is "no match number yet"; the number input shows it as empty.
+    // oxlint-disable-next-line unicorn/no-null
+    matchNumber: null,
     // Base UI's Select uses null for "no selection"; undefined would make it uncontrolled
     // oxlint-disable-next-line unicorn/no-null
     position: null,
@@ -87,24 +97,15 @@ const BLANK_SCOUTING_FORM: ScoutingFormValues = {
   notes: "",
 };
 
-/// Constants - regular
-
-export const SAVED_MATCHES_KEY = "savedMatches";
-
 /// Zod schemas
-
-const savedMatchSchema = z.object({
-  scouter: z.string(),
-  key: z.string(),
-  team: z.string(),
-  qrData: z.string(),
-  savedAt: z.number(),
-});
 
 export const startSchema = z.object({
   scouterName: z.string().trim().min(1, "Enter your name."),
   eventCode: z.enum(EVENT_CODES.map((event) => event.value)),
-  matchNumber: z.string().regex(/^\d+$/u, "Enter a match number."),
+  matchNumber: z
+    .number()
+    .nullable()
+    .pipe(z.int("Enter a match number.").positive("Enter a match number.")),
   position: z
     .enum(POSITIONS.map((position) => position.value))
     .nullable()
@@ -131,6 +132,10 @@ const scoutingFormSchema = z.object({
   notes: z.string(),
 });
 
+const savedMatchSchema = scoutingFormSchema.extend({
+  savedAt: z.number(),
+});
+
 /// Forms
 
 const scoutingFormOptions = formOptions({
@@ -150,40 +155,56 @@ export const ScoutingContext = createContext<ScoutingState | undefined>(undefine
 
 /// Helper functions
 
-export function readSavedMatches(): SavedMatch[] {
-  try {
-    const stored = z
-      .array(z.unknown())
-      .parse(JSON.parse(localStorage.getItem(SAVED_MATCHES_KEY) ?? "[]"));
-    return stored.flatMap((entry) => {
-      const result = savedMatchSchema.safeParse(entry);
-      return result.success ? [result.data] : [];
-    });
-  } catch {
-    return [];
-  }
+export function savedMatchKey(start: SavedMatch["start"]) {
+  return `${start.eventCode}_qm${String(start.matchNumber)}_${start.position}`;
 }
 
-export function toQrData(values: ScoutingFormValues) {
+export function toQrData(formValues: ScoutingFormValues) {
   return [
-    values.start.eventCode,
-    values.start.matchNumber,
-    values.start.position,
-    values.start.team,
-    values.start.scouterName,
-    values.autoCoral.L1,
-    values.autoCoral.L2,
-    values.autoCoral.L3,
-    values.autoCoral.L4,
-    values.teleCoral.L1,
-    values.teleCoral.L2,
-    values.teleCoral.L3,
-    values.teleCoral.L4,
-    values.endgame,
-    ...COMMENTS.map((c) => (values.comments.includes(c) ? 1 : 0)),
-    values.notes.replaceAll(/[\t\n]/gu, " "),
+    formValues.start.eventCode,
+    formValues.start.matchNumber,
+    formValues.start.position,
+    formValues.start.team,
+    formValues.start.scouterName,
+    formValues.autoCoral.L1,
+    formValues.autoCoral.L2,
+    formValues.autoCoral.L3,
+    formValues.autoCoral.L4,
+    formValues.teleCoral.L1,
+    formValues.teleCoral.L2,
+    formValues.teleCoral.L3,
+    formValues.teleCoral.L4,
+    formValues.endgame,
+    ...COMMENTS.map((c) => (formValues.comments.includes(c) ? 1 : 0)),
+    formValues.notes.replaceAll(/[\t\n]/gu, " "),
   ].join("\t");
 }
+
+/// Tanstack Query options
+
+export const savedMatchesQueryOptions = queryOptions({
+  queryKey: ["savedMatches"],
+  queryFn: async () => {
+    const db = await openDB("saved-matches", undefined, {
+      upgrade: (database) => {
+        database.createObjectStore("matches");
+      },
+    });
+    const rows = await db.getAll("matches");
+    db.close();
+    return rows
+      .flatMap((row) => {
+        const result = savedMatchSchema.safeParse(row);
+        if (!result.success) return [];
+        return [result.data];
+      })
+      .toSorted((a, b) => b.savedAt - a.savedAt);
+  },
+  staleTime: Infinity,
+  refetchOnWindowFocus: "always",
+  retry: false,
+  networkMode: "always",
+});
 
 /// Scouting hook
 
@@ -200,35 +221,47 @@ function ScoutingPage() {
   const [step, setStep] = useState<Step>("start");
   const [confirmed, setConfirmed] = useState(false);
 
-  const form = useAppForm({
-    ...scoutingFormOptions,
-    onSubmit: ({ value, formApi }) => {
-      const newEntry: SavedMatch = {
-        scouter: value.start.scouterName,
-        key: `${value.start.eventCode}_qm${value.start.matchNumber}_${String(value.start.position)}`,
-        team: value.start.team,
-        qrData: toQrData(value),
-        savedAt: Date.now(),
-      };
-      const nextSaved = [newEntry, ...readSavedMatches().filter((m) => m.key !== newEntry.key)];
-      localStorage.setItem(SAVED_MATCHES_KEY, JSON.stringify(nextSaved));
-      formApi.reset(
+  const queryClient = useQueryClient();
+
+  const { mutate: saveMatch, status: saveStatus } = useMutation({
+    mutationFn: async (formValues: ScoutingFormValues) => {
+      const match = savedMatchSchema.parse({ ...formValues, savedAt: Date.now() });
+      const db = await openDB("saved-matches", undefined, {
+        upgrade: (database) => {
+          database.createObjectStore("matches");
+        },
+      });
+      await db.put("matches", match, savedMatchKey(match.start));
+      db.close();
+
+      return match;
+    },
+    onSuccess: ({ start }) => {
+      form.reset(
         {
           ...BLANK_SCOUTING_FORM,
-          start: {
-            ...value.start,
-            matchNumber: String(Number(value.start.matchNumber) + 1),
-            team: "",
-          },
+          start: { ...start, matchNumber: start.matchNumber + 1, team: "" },
         },
         { keepDefaultValues: true },
       );
       setConfirmed(false);
       setStep("start");
+      return queryClient.invalidateQueries({ queryKey: savedMatchesQueryOptions.queryKey });
+    },
+    networkMode: "always",
+  });
+
+  const form = useAppForm({
+    ...scoutingFormOptions,
+    onSubmit: ({ value }) => {
+      saveMatch(value);
     },
   });
 
-  const scouting = useMemo(() => ({ step, setStep, confirmed, setConfirmed }), [step, confirmed]);
+  const scouting = useMemo(
+    () => ({ step, setStep, confirmed, setConfirmed, saveStatus }),
+    [step, confirmed, saveStatus],
+  );
 
   return (
     <form.AppForm>
