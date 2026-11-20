@@ -1,13 +1,19 @@
 import { routeTree } from "./routeTree.gen";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import ReactDOM from "react-dom/client";
+
+import { schedulePersister } from "@/routes/_scouting/index";
+
+const PERSIST_OPTIONS = { persister: schedulePersister };
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60_000,
+      gcTime: Infinity,
     },
   },
 });
@@ -37,8 +43,8 @@ if (!rootElement) throw new Error("Root element #app not found");
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={PERSIST_OPTIONS}>
       <RouterProvider router={router} />
-    </QueryClientProvider>,
+    </PersistQueryClientProvider>,
   );
 }
