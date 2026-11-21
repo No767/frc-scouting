@@ -23,6 +23,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # Copy necessary build configurations
 COPY vite.config.ts index.html tsconfig.json tsconfig.app.json tsconfig.node.json docker/nginx.conf /website/
 COPY src /website/src
+COPY public /website/public
 
 # Now build for optimal caching
 RUN --mount=type=secret,id=tbaApiKey,env=VITE_TBA_API_KEY \
