@@ -1,11 +1,13 @@
 import { QRCodeSVG } from "qrcode.react";
 
+import beakleLogo from "@/assets/beakle.png";
+
 interface QRCodeProps {
   value: string;
 }
 
 const QR_IMAGE = {
-  src: "https://bicmztrblwpucysepkoq.supabase.co/storage/v1/object/public/images/Beakle.png",
+  src: beakleLogo,
   height: 70,
   width: 70,
   excavate: true,
