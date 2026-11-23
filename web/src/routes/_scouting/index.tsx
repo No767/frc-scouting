@@ -386,7 +386,6 @@ function ScoutingIndexPage() {
   const enterTeamManually =
     matchNumber !== null && position !== null && !isLoading && team === undefined;
   const teamPlaceholder = isLoading ? "Looking up…" : "Pick an event, match, and position";
-  const message = team ?? teamPlaceholder;
 
   return (
     <Card className="mx-auto w-full max-w-2xl gap-4">
@@ -503,8 +502,8 @@ function ScoutingIndexPage() {
                           "w-auto bg-transparent data-placeholder:text-foreground",
                           field.state.value &&
                             (field.state.value.startsWith("R")
-                              ? "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive aria-expanded:bg-destructive/20 aria-expanded:text-destructive dark:hover:bg-destructive/20"
-                              : "border-blue-500/20 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 hover:text-blue-500 aria-expanded:bg-blue-500/20 aria-expanded:text-blue-500 dark:hover:bg-blue-500/20"),
+                              ? "border-destructive/20 bg-destructive/10 text-[color-mix(in_oklch,var(--color-destructive),black_7%)] hover:bg-destructive/20 hover:text-[color-mix(in_oklch,var(--color-destructive),black_7%)] aria-expanded:bg-destructive/20 aria-expanded:text-[color-mix(in_oklch,var(--color-destructive),black_7%)] dark:hover:bg-destructive/20"
+                              : "border-blue-500/20 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 hover:text-blue-600 aria-expanded:bg-blue-500/20 aria-expanded:text-blue-600 dark:hover:bg-blue-500/20"),
                         )}
                       >
                         <SelectValue placeholder="Select Position" />
@@ -525,7 +524,7 @@ function ScoutingIndexPage() {
               {enterTeamManually ? (
                 <form.Field name="start.team" validators={TEAM_VALIDATORS}>
                   {(field) => (
-                    <div className="flex flex-col items-center gap-4 rounded-lg border p-4">
+                    <div className="flex flex-col items-center gap-4 rounded-lg border border-foreground/15 p-4">
                       <span className="text-sm text-muted-foreground">Enter Team Manually:</span>
                       <Input
                         name="start.team"
@@ -543,11 +542,19 @@ function ScoutingIndexPage() {
                   )}
                 </form.Field>
               ) : (
-                <div className="flex flex-col items-center gap-4 rounded-lg border p-4">
-                  <span className="text-base text-muted-foreground md:text-sm">
-                    You're Scouting Team:
-                  </span>
-                  <span className="text-center text-3xl font-bold tabular-nums">{message}</span>
+                <div className="flex flex-col items-center gap-4 rounded-lg border border-foreground/15 p-4">
+                  {team === undefined ? (
+                    <span className="text-center text-3xl font-bold tabular-nums">
+                      {teamPlaceholder}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-base text-muted-foreground md:text-sm">
+                        You're Scouting Team:
+                      </span>
+                      <span className="text-center text-3xl font-bold tabular-nums">{team}</span>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -569,12 +576,7 @@ function ScoutingIndexPage() {
         {step === "auto" && (
           <form.Field name="autoCoral">
             {(field) => (
-              <Coral
-                levels={field.state.value}
-                setLevels={handleAutoCoralChange}
-                maxTotal={5}
-                maxPerLevel={5}
-              />
+              <Coral levels={field.state.value} setLevels={handleAutoCoralChange} maxPerLevel={5} />
             )}
           </form.Field>
         )}
@@ -586,7 +588,6 @@ function ScoutingIndexPage() {
                   <Coral
                     levels={field.state.value}
                     setLevels={handleTeleCoralChange}
-                    maxTotal={25}
                     maxPerLevel={12}
                   />
                 )}

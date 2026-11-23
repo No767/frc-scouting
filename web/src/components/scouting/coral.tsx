@@ -7,16 +7,13 @@ import { Field, FieldLabel } from "@/components/ui/field";
 interface CoralProps {
   levels: CoralLevels;
   setLevels: (levels: CoralLevels) => void;
-  maxTotal: number;
   maxPerLevel: number;
 }
 
 interface CoralButtonProps {
   level: keyof CoralLevels;
   count: number;
-  total: number;
   setLevel: (level: keyof CoralLevels, count: number) => void;
-  maxTotal: number;
   maxPerLevel: number;
 }
 
@@ -27,40 +24,43 @@ export interface CoralLevels {
   L1: number;
 }
 
-function CoralButton({
-  level,
-  count,
-  total,
-  setLevel,
-  maxTotal,
-  maxPerLevel,
-}: Readonly<CoralButtonProps>) {
+function CoralButton({ level, count, setLevel, maxPerLevel }: Readonly<CoralButtonProps>) {
   const handleDecrease = useCallback(() => {
     setLevel(level, count - 1);
   }, [count, level, setLevel]);
   const handleIncrease = useCallback(() => {
-    if (count < maxPerLevel && total < maxTotal) setLevel(level, count + 1);
-  }, [count, level, maxPerLevel, maxTotal, setLevel, total]);
+    setLevel(level, count + 1);
+  }, [count, level, setLevel]);
 
   return (
-    <div className="relative flex items-center gap-2">
+    <div className="relative flex items-center gap-1 sm:gap-2">
       <FieldLabel className="absolute right-full w-8 text-[18px] font-semibold">{level}</FieldLabel>
-      <Button size="icon" aria-label="Decrease" disabled={count === 0} onClick={handleDecrease}>
+      <Button
+        size="icon"
+        aria-label="Decrease"
+        disabled={count === 0}
+        onClick={handleDecrease}
+        className="size-11"
+      >
         <Minus />
       </Button>
-      <span className="flex h-9 w-12 items-center justify-center rounded-md border text-[16px] font-semibold tabular-nums">
+      <span className="flex h-11 w-10 items-center justify-center rounded-md border text-[16px] font-semibold tabular-nums sm:w-12">
         {count}
       </span>
-      <Button size="icon" aria-label="Increase" onClick={handleIncrease}>
+      <Button
+        size="icon"
+        aria-label="Increase"
+        disabled={count >= maxPerLevel}
+        onClick={handleIncrease}
+        className="size-11"
+      >
         <Plus />
       </Button>
     </div>
   );
 }
 
-export function Coral({ levels, setLevels, maxTotal, maxPerLevel }: Readonly<CoralProps>) {
-  const total = levels.L4 + levels.L3 + levels.L2 + levels.L1;
-
+export function Coral({ levels, setLevels, maxPerLevel }: Readonly<CoralProps>) {
   const handleLevelChange = useCallback(
     (level: keyof CoralLevels, count: number) => {
       setLevels({ ...levels, [level]: count });
@@ -75,33 +75,25 @@ export function Coral({ levels, setLevels, maxTotal, maxPerLevel }: Readonly<Cor
         <CoralButton
           level="L4"
           count={levels.L4}
-          total={total}
           setLevel={handleLevelChange}
-          maxTotal={maxTotal}
           maxPerLevel={maxPerLevel}
         />
         <CoralButton
           level="L3"
           count={levels.L3}
-          total={total}
           setLevel={handleLevelChange}
-          maxTotal={maxTotal}
           maxPerLevel={maxPerLevel}
         />
         <CoralButton
           level="L2"
           count={levels.L2}
-          total={total}
           setLevel={handleLevelChange}
-          maxTotal={maxTotal}
           maxPerLevel={maxPerLevel}
         />
         <CoralButton
           level="L1"
           count={levels.L1}
-          total={total}
           setLevel={handleLevelChange}
-          maxTotal={maxTotal}
           maxPerLevel={maxPerLevel}
         />
       </div>

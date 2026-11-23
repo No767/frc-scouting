@@ -23,7 +23,7 @@ export function CommentToggle({ comment }: Readonly<CommentToggleProps>) {
       onClick={handleClick}
       onPointerLeave={handlePointerLeave}
       className={cn(
-        "h-7 px-2 text-xs data-pressed:bg-primary data-pressed:text-white sm:h-8 sm:px-3 sm:text-sm",
+        "h-9 px-2 text-xs data-pressed:bg-primary data-pressed:text-white sm:px-3 sm:text-sm",
         !justClicked && "data-pressed:hover:bg-destructive",
       )}
     >
