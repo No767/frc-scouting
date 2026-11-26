@@ -14,9 +14,7 @@ export const Route = createRootRouteWithContext<{
 function RootComponent() {
   return (
     <Navbar>
-      <div className="flex-1 p-4 md:p-8 xl:px-12 xl:py-10 2xl:p-12">
-        <Outlet />
-      </div>
+      <Outlet />
     </Navbar>
   );
 }

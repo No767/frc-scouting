@@ -1,9 +1,11 @@
+import { cn } from "cn";
 import { QRCodeSVG } from "qrcode.react";
 
 import beakleLogo from "@/assets/beakle.png";
 
 interface QRCodeProps {
   value: string;
+  className?: string;
 }
 
 const QR_IMAGE = {
@@ -13,14 +15,17 @@ const QR_IMAGE = {
   excavate: true,
 };
 
-export function QRCode({ value }: Readonly<QRCodeProps>) {
+export function QRCode({ value, className }: Readonly<QRCodeProps>) {
   return (
     <QRCodeSVG
       value={value}
       size={300}
       level="H"
       imageSettings={QR_IMAGE}
-      className="mx-auto h-auto w-full max-w-xs [&_image]:[clip-path:inset(0_round_2px)]"
+      className={cn(
+        "mx-auto h-auto w-full max-w-xs [&_image]:[clip-path:inset(0_round_2px)]",
+        className,
+      )}
     />
   );
 }

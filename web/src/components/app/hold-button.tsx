@@ -13,6 +13,7 @@ interface HoldButtonProps {
   doneLabel: string;
   failedLabel?: string;
   variant: keyof typeof HOLD_COLORS;
+  className?: string;
 }
 
 /// Constants
@@ -48,6 +49,7 @@ export function HoldButton({
   doneLabel,
   failedLabel,
   variant,
+  className,
 }: Readonly<HoldButtonProps>) {
   const [phase, setPhase] = useState<"idle" | "holding" | "held">("idle");
   const shown = phase === "held" ? status : phase;
@@ -77,6 +79,7 @@ export function HoldButton({
         shown === "idle" && "border-border bg-background text-secondary-foreground",
         HOLD_COLORS[variant][shown],
         disabled && "border-border bg-muted text-muted-foreground disabled:opacity-100",
+        className,
       )}
     >
       <span
