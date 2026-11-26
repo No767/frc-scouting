@@ -11,6 +11,7 @@ import { z } from "zod";
 import beakleLogo from "@/assets/beakle.png";
 import { CommentToggle } from "@/components/app/comment-toggle";
 import { HoldButton } from "@/components/app/hold-button";
+import { Lightbox } from "@/components/app/lightbox";
 import { QRCode } from "@/components/app/qrcode";
 import { type CoralLevels, Coral } from "@/components/scouting/coral";
 import { Button } from "@/components/ui/button";
@@ -333,6 +334,7 @@ function ScoutingIndexPage() {
   const confirmedTeam = useSelector(form.store, (state) => state.values.start.team);
 
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const { data: team, isLoading } = useQuery(teamQueryOptions(eventCode, matchNumber, position));
 
@@ -368,6 +370,14 @@ function ScoutingIndexPage() {
   const handleSave = useCallback(() => {
     void form.handleSubmit();
   }, [form]);
+
+  const handleLightboxOpen = useCallback(() => {
+    setLightboxOpen(true);
+  }, []);
+
+  const handleLightboxClose = useCallback(() => {
+    setLightboxOpen(false);
+  }, []);
 
   const handleText = useCallback(
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -928,15 +938,27 @@ function ScoutingIndexPage() {
                   "max-lg:landscape:shrink-0 max-lg:landscape:rounded-[20px] max-lg:landscape:p-3.5",
                 )}
               >
-                <QRCode
-                  value={toQrData(state.values)}
-                  className={cn(
-                    "size-74 max-w-none",
-                    "sm:size-110 xl:size-[clamp(15rem,calc(100svh-25rem),27.5rem)]",
-                    "max-lg:landscape:size-52",
-                  )}
-                />
+                <button
+                  type="button"
+                  aria-label="Enlarge QR code"
+                  onClick={handleLightboxOpen}
+                  className="block w-full cursor-zoom-in outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+                >
+                  <QRCode
+                    value={toQrData(state.values)}
+                    className={cn(
+                      "size-74 max-w-none",
+                      "sm:size-110 xl:size-[clamp(15rem,calc(100svh-25rem),27.5rem)]",
+                      "max-lg:landscape:size-52",
+                    )}
+                  />
+                </button>
               </div>
+              {lightboxOpen && (
+                <Lightbox onClose={handleLightboxClose}>
+                  <QRCode value={toQrData(state.values)} className="max-w-none" />
+                </Lightbox>
+              )}
               <div
                 className={cn(
                   "contents",

@@ -7,6 +7,7 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 
 import beakleLogo from "@/assets/beakle.png";
 import { HoldButton } from "@/components/app/hold-button";
+import { Lightbox } from "@/components/app/lightbox";
 import { QRCode } from "@/components/app/qrcode";
 import {
   AlertDialog,
@@ -64,6 +65,7 @@ function ScoutingSavedPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [matchPicked, setMatchPicked] = useState(false);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const { mutate: deleteSavedMatches, status: deleteStatus } = useMutation({
     mutationFn: async () => {
@@ -84,6 +86,14 @@ function ScoutingSavedPage() {
   const handleDeleteSaved = useCallback(() => {
     deleteSavedMatches();
   }, [deleteSavedMatches]);
+
+  const handleLightboxOpen = useCallback(() => {
+    setLightboxOpen(true);
+  }, []);
+
+  const handleLightboxClose = useCallback(() => {
+    setLightboxOpen(false);
+  }, []);
 
   const handleJump = useCallback(
     (index: number | null) => {
@@ -197,7 +207,14 @@ function ScoutingSavedPage() {
               <CarouselContent>
                 {saved.map((match) => (
                   <CarouselItem key={savedMatchKey(match.start)}>
-                    <QRCode value={toQrData(match)} className="max-w-none" />
+                    <button
+                      type="button"
+                      aria-label="Enlarge QR code"
+                      onClick={handleLightboxOpen}
+                      className="block w-full cursor-zoom-in outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+                    >
+                      <QRCode value={toQrData(match)} className="max-w-none" />
+                    </button>
                   </CarouselItem>
                 ))}
               </CarouselContent>
@@ -214,6 +231,11 @@ function ScoutingSavedPage() {
                 )}
               />
             </Carousel>
+            {lightboxOpen && (
+              <Lightbox onClose={handleLightboxClose}>
+                <QRCode value={toQrData(current)} className="max-w-none" />
+              </Lightbox>
+            )}
             <div
               className={cn(
                 "contents",
