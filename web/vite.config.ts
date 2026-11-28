@@ -24,7 +24,7 @@ export default defineConfig({
         description: "A QR code generating scouting application for FRC 5507",
         display: "standalone",
         background_color: "#ffffff",
-        theme_color: "#ffffff",
+        theme_color: "#e41d1a",
         icons: [
           { src: "pwa-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
           { src: "pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "any" },
